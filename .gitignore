@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.DS_Store
+
+# OpenCV / local project artifacts
+haarcascade_*.xml
+*.log
+
+# VS Code
+.vscode/
