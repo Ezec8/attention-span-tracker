@@ -76,11 +76,13 @@ while True:
         nose = landmarks[1]
         chin = landmarks[152]
 
-        dx = eye_mid["x"] - nose.x
-        dy = eye_mid["y"] - nose.y
+        eye_width = abs(right_eye_center["x"] - left_eye_center["x"])
+        horizontal_offset = nose.x - eye_mid["x"]
         face_height = chin.y - eye_mid["y"]
 
-        yaw = math.degrees(math.atan2(dx, dy if abs(dy) > 1e-6 else 1e-6))
+        # Normalize horizontal nose movement by eye width so distance from the
+        # camera does not change the left/right sensitivity.
+        yaw = horizontal_offset / eye_width if eye_width > 1e-6 else 0.0
         # In image coordinates, a lower nose position means the head is
         # tilted down. Normalize it by face height to reduce distance effects.
         pitch = (
@@ -91,15 +93,15 @@ while True:
 
         if avg_ear < 0.25:
             new_state = "EYES CLOSED"
-        elif abs(yaw) > 18:
-            if yaw < 0:
-                new_state = "LOOKING LEFT"
-            else:
-                new_state = "LOOKING RIGHT"
         elif pitch > 0.58:
             new_state = "LOOKING DOWN"
         elif pitch < 0.42:
             new_state = "LOOKING UP"
+        elif abs(yaw) > 0.05:
+            if yaw < 0:
+                new_state = "LOOKING LEFT"
+            else:
+                new_state = "LOOKING RIGHT"
         else:
             new_state = "ATTENTIVE"
 
@@ -109,9 +111,14 @@ while True:
 
         elapsed = time.monotonic() - state_started_at
         display_state = state
+        text_color = (0, 255, 0)
 
         if state != "ATTENTIVE":
             display_state = f"{state} ({elapsed:.1f}s)"
+
+        if state != "ATTENTIVE" and elapsed >= 10:
+            display_state = "PLEASE PAY ATTENTION"
+            text_color = (0, 0, 255)
 
         for landmark in landmarks:
             x = int(landmark.x * frame.shape[1])
@@ -124,13 +131,13 @@ while True:
             (20, 40),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
-            (0, 255, 0),
+            text_color,
             2,
         )
 
         cv2.putText(
             frame,
-            f"EAR: {avg_ear:.3f}",
+            f"EAR: {avg_ear:.3f}  YAW: {yaw:.3f}",
             (20, 80),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
